@@ -30,3 +30,12 @@ export class Looper {
 		};
 	}
 }
+
+export const formatTimespan = (timespan: number) => {
+	const nSeconds = timespan / 1000 % 60;
+	const nMinutes = Math.floor(timespan / 1000 / 60 % 60);
+	const nHours = Math.floor(timespan / 1000 / 60 / 60);
+	return `${nHours.toString().padStart(2, "0")}:${
+			nMinutes.toString().padStart(2, "0")}:${
+			nSeconds.toFixed(3).padStart(6, "0")}`;
+};

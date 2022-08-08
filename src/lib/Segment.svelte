@@ -1,8 +1,14 @@
 <script lang="ts">
 	import {createEventDispatcher} from "svelte";
+	import {fly, fade} from "svelte/transition";
+	import type {TransitionConfig} from "svelte/transition";
+	import {quartIn, quartOut} from "svelte/easing";
 	import type {TimeSegment} from "./TimeSegment";
 
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher<{
+		delete: {segment: TimeSegment, index: number},
+		"duration-change": {segment: TimeSegment, index: number},
+	}>();
 
 	export let segment: TimeSegment;
 
@@ -14,10 +20,28 @@
 			index < currentSegmentIndex ? 1 :
 			index > currentSegmentIndex ? 0 :
 			currentSegmentProgress;
+
+	const lerp = (t: number, a: number, b: number) => a + t * (b - a);
+
+	const expand = (node: Element, {duration, easing}: TransitionConfig) => {
+		const height = parseInt(getComputedStyle(node).height);
+
+		return {
+			duration,
+			easing,
+			css: (t: number) => `
+height: ${t * height}px;
+padding: ${t * 0.5}em;
+margin: ${(1 - t) * -0.5}em 0;
+border-width: ${t * 1}px;
+overflow-y: hidden;`,
+		};
+	};
 </script>
 
-<segment- style:--progress={progress}>
-	<button on:click={() => dispatch("delete", {segment})}>×</button>
+<segment- style:--progress={progress}
+		transition:expand={{easing: quartOut}}>
+	<button on:click={() => dispatch("delete", {segment, index})}>×</button>
 
 	<input type="text"
 			placeholder="Label"
@@ -26,7 +50,7 @@
 			min="0"
 			step="500"
 			bind:value={segment.duration}
-			on:input={() => dispatch("duration-change", {segment})} />
+			on:input={() => dispatch("duration-change", {segment, index})} />
 </segment->
 
 <style lang="scss">
@@ -34,7 +58,6 @@
 		display: flex;
 		flex-flow: column;
 		gap: 0.5em;
-		width: 20ch;
 		border: 1px solid #eaa;
 		padding: 0.5em;
 		border-radius: 1em;

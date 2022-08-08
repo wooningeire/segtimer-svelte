@@ -1,14 +1,14 @@
 <script lang="ts">
 	import Segment from "./lib/Segment.svelte";
 	import { TimeSegment } from "./lib/TimeSegment";
-import { Looper } from "./lib/util";
+import { formatTimespan, Looper } from "./lib/util";
 
 	let segments = [
 		new TimeSegment(2000, "First label"),
 	];
 
 	$: segmentEnds = (() => {
-		const ends = [];
+		const ends: number[] = [];
 		for (const segment of segments) {
 			ends.push((ends.at(-1) ?? 0) + segment.duration);
 		} 
@@ -27,13 +27,14 @@ import { Looper } from "./lib/util";
 
 	let currentSegmentIndex = 0;
 	$: segments, currentSegmentIndex = (() => {
+		currentSegmentIndex = 0;
 		while (offset >= segmentEnds[currentSegmentIndex] ?? Infinity) {
 			currentSegmentIndex++;
 		}
 		return currentSegmentIndex;
 	})();
 
-	let lastStartMs = null;
+	let lastStartMs: number = null;
 	const looper = new Looper(msSincePageLoad => {
 		if (lastStartMs === null) {
 			lastStartMs = msSincePageLoad;
@@ -84,30 +85,31 @@ import { Looper } from "./lib/util";
 	$: currentSegmentProgress = currentSegmentMs / (currentSegment?.duration ?? Infinity);
 	$: done = currentSegmentIndex >= segments.length;
 
-	const deleteSegment = ({detail: segment}: {detail: TimeSegment}) => {
-		segments.splice(segments.indexOf(segment), 1);
+	const deleteSegment = ({detail: {index}}: CustomEvent<{segment: TimeSegment, index: number}>) => {
+		segments.splice(index, 1);
 		segments = segments;
 	};
 </script>
 
 <main>
 	<segments-list>
-		{#each segments as segment, i}
+		{#each segments as segment, i (segment.id)}
 			<Segment {segment}
 					index={i}
 					{currentSegmentIndex}
 					{currentSegmentProgress}
 					on:delete={deleteSegment}
-					on:duration-change={() => segments = segments} />
+					on:duration-change={({detail: {segment, index}}) => segments[index] = segment} />
 		{/each}
 
 		<button on:click={appendSegment}>+</button>
 	</segments-list>
 	
 	<controls->
-		<button on:click={toggle}>Go</button>
+		<button on:click={toggle}>{running ? "Pause" : "Go"}</button>
 		<button on:click={reset}>Reset</button>
 
+		<span>{formatTimespan(offset)}</span>
 		<span>{Math.round(offset)}</span>
 	</controls->
 </main>
@@ -122,5 +124,9 @@ import { Looper } from "./lib/util";
 			flex-flow: column;
 			gap: 1em;
 		}
+	}
+
+	segments-list {
+		width: 20ch;
 	}
 </style>
